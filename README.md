@@ -21,7 +21,7 @@ You just need to install [DDDTW.PollyAttribute.Core nuget package](https://www.n
 Then you can add PollyAttribute on specific method:
 
 ```csharp
-public interface IProductService
+    public interface IProductService
     {
         string GetProductName();
 
