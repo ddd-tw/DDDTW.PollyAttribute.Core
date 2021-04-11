@@ -44,8 +44,10 @@ namespace DDDTW.PollyAttribute.Core
                 policy = BuildPolicy(context, policy);
             }
 
-            var pollyCtx = new Context();
-            pollyCtx["aspectContext"] = context;
+            var pollyCtx = new Context
+            {
+                ["aspectContext"] = context
+            };
 
             if (CacheTTLMilliseconds > 0)
             {
@@ -63,41 +65,43 @@ namespace DDDTW.PollyAttribute.Core
 
         private AsyncPolicy BuildPolicy(AspectContext context, AsyncPolicy policy)
         {
-            if (policy == null)
+            if (policy != null)
+                return policy;
+
+            policy = Policy.NoOpAsync();
+            if (IsEnableCircuitBreaker)
             {
-                policy = Policy.NoOpAsync();
-                if (IsEnableCircuitBreaker)
-                {
-                    policy = policy.WrapAsync(Policy.Handle<Exception>().CircuitBreakerAsync(
-                        ExceptionsAllowedBeforeBreaking,
-                        TimeSpan.FromMilliseconds(MillisecondsOfBreak)));
-                }
-
-                if (TimeOutMilliseconds > 0)
-                {
-                    policy = policy.WrapAsync(Policy.TimeoutAsync(() => TimeSpan.FromMilliseconds(TimeOutMilliseconds),
-                        global::Polly.Timeout.TimeoutStrategy.Pessimistic));
-                }
-
-                if (MaxRetryTimes > 0)
-                {
-                    policy = policy.WrapAsync(Policy.Handle<Exception>().WaitAndRetryAsync(MaxRetryTimes,
-                        i => TimeSpan.FromMilliseconds(RetryIntervalMilliseconds)));
-                }
-
-                var policyFallBack = Policy
-                    .Handle<Exception>()
-                    .FallbackAsync(async (ctx, t) =>
-                    {
-                        var aspectContext = (AspectContext)ctx["aspectContext"];
-                        var fallBackMethod = context.ServiceMethod.DeclaringType.GetMethod(this.FallBackMethod);
-                        var fallBackResult = fallBackMethod.Invoke(context.Implementation, context.Parameters);
-                        aspectContext.ReturnValue = fallBackResult;
-                    }, async (ex, t) => { });
-
-                policy = policyFallBack.WrapAsync(policy);
-                policies.TryAdd(context.ServiceMethod, policy);
+                policy = policy.WrapAsync(Policy.Handle<Exception>().CircuitBreakerAsync(
+                    ExceptionsAllowedBeforeBreaking,
+                    TimeSpan.FromMilliseconds(MillisecondsOfBreak)));
             }
+
+            if (TimeOutMilliseconds > 0)
+            {
+                policy = policy.WrapAsync(Policy.TimeoutAsync(() => TimeSpan.FromMilliseconds(TimeOutMilliseconds),
+                    Polly.Timeout.TimeoutStrategy.Pessimistic));
+            }
+
+            if (MaxRetryTimes > 0)
+            {
+                policy = policy.WrapAsync(Policy.Handle<Exception>().WaitAndRetryAsync(MaxRetryTimes,
+                    i => TimeSpan.FromMilliseconds(RetryIntervalMilliseconds)));
+            }
+
+            var policyFallBack = Policy
+                .Handle<Exception>()
+                .FallbackAsync((ctx, t) =>
+                {
+                    var aspectContext = (AspectContext)ctx["aspectContext"];
+                    var fallBackMethod = context.ServiceMethod?.DeclaringType?.GetMethod(FallBackMethod);
+                    var fallBackResult = fallBackMethod?.Invoke(context.Implementation, context.Parameters);
+                    aspectContext.ReturnValue = fallBackResult;
+
+                    return Task.FromResult(fallBackResult);
+                }, async (ex, t) => throw ex);
+
+            policy = policyFallBack.WrapAsync(policy);
+            policies.TryAdd(context.ServiceMethod, policy);
 
             return policy;
         }

@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<PackageId>DDDTW.PollyAttribute.Core</PackageId>
-		<Version>1.0.1</Version>
+		<Version>1.1.2</Version>
 		<Authors>DDDTW</Authors>
 		<Company>DDDTW</Company>
 		<PackageDescription>This is made by DDD community in Taiwan. In this package, we create a lot of classes and interfaces, they are related DDD.</PackageDescription>
@@ -10,7 +10,7 @@
 		<Copyright>© DDDTW., All rights reserved.</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageTags>DDD;Polly;Attribute;AOP</PackageTags>
-		<PackageReleaseNotes>First release.</PackageReleaseNotes>
+		<PackageReleaseNotes>When the exception happing times is over upper limit of retry, then throw exception.</PackageReleaseNotes>
 		<TargetFramework>netstandard2.0</TargetFramework>
 	</PropertyGroup>
 
